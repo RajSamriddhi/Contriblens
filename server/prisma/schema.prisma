@@ -1,0 +1,69 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Repository {
+  id            String   @id @default(cuid())
+  githubUrl     String   @unique
+  owner         String
+  name          String
+  fullName      String
+  description   String?
+  stars         Int      @default(0)
+  forks         Int      @default(0)
+  openIssues    Int      @default(0)
+  language      String?
+  defaultBranch String?
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  reports       AnalysisReport[]
+}
+
+model AnalysisReport {
+  id                String   @id @default(cuid())
+  repositoryId      String
+  analyzedAt        DateTime @default(now())
+
+  contributorCount  Int      @default(0)
+  commitCount       Int      @default(0)
+  pullRequestCount  Int      @default(0)
+
+  scoringFormula    String
+  isLimitedSample   Boolean  @default(true)
+
+  repository Repository @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
+
+  contributors      ContributorSnapshot[]
+
+  @@index([repositoryId, analyzedAt])
+}
+
+model ContributorSnapshot {
+  id                         String   @id @default(cuid())
+  reportId                   String
+  username                   String
+  profileUrl                 String?
+  contributions               Int?
+  pullRequestsInFetchedSample Int      @default(0)
+  score                       Float?
+  scoreStatus                 String
+
+  report AnalysisReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+
+  @@unique([reportId, username])
+  @@index([username])
+}
